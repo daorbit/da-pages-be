@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.js"
+    }
+  ],
+  "env": {
+    "PORT": "5000",
+    "MONGODB_URI": "mongodb+srv://adnexus2025_db_user:P08TNcAWNfCowXcs@daorbitpages.qekjaqf.mongodb.net/"
+  }
+}
