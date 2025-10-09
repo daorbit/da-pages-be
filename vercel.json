@@ -13,7 +13,12 @@
     }
   ],
   "env": {
-    "PORT": "5000",
-    "MONGODB_URI": "mongodb+srv://adnexus2025_db_user:P08TNcAWNfCowXcs@daorbitpages.qekjaqf.mongodb.net/"
+    "NODE_ENV": "production",
+    "MONGODB_URI_MONGODB_URI": "mongodb+srv://Vercel-Admin-da-dynamic-pages:jRv4Zh2SNY442kmO@da-dynamic-pages.3uym3zn.mongodb.net/?retryWrites=true&w=majority"
+  },
+  "functions": {
+    "server.js": {
+      "maxDuration": 30
+    }
   }
 }

@@ -83,7 +83,7 @@ pageSchema.pre('save', function(next) {
 });
 
 // Index for better query performance
-pageSchema.index({ slug: 1 });
+// Note: slug index is already created by 'unique: true' in schema
 pageSchema.index({ groups: 1 });
 pageSchema.index({ createdAt: -1 });
 

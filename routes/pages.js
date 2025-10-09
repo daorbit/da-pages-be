@@ -120,6 +120,11 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching pages:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
       message: 'Error fetching pages',
