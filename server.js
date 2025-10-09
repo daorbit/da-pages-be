@@ -30,13 +30,16 @@ const limiter = rateLimit({
 });
 
 // CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : [
+      'http://localhost:3000',
+      'https://da-admin-dynamic-pages.vercel.app',
+      'http://localhost:3001'
+    ];
+
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://da-admin-dynamic-pages.vercel.app',
-    'http://localhost:3001', // For Next.js public site if needed
-    'https://your-public-site.vercel.app' // Replace with your actual public site URL
-  ],
+  origin: allowedOrigins,
   credentials: true,
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
