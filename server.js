@@ -29,9 +29,21 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.'
 });
 
+// CORS configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://da-admin-dynamic-pages.vercel.app',
+    'http://localhost:3001', // For Next.js public site if needed
+    'https://your-public-site.vercel.app' // Replace with your actual public site URL
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
 // Middleware
 app.use(helmet()); // Security headers
-app.use(cors()); // Enable CORS
+app.use(cors(corsOptions)); // Enable CORS with specific origins
 app.use(morgan('combined')); // Logging
 app.use(limiter); // Rate limiting
 app.use(express.json({ limit: '10mb' })); // Parse JSON bodies
