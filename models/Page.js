@@ -52,7 +52,7 @@ const pageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: [true, 'Content is required']
+    default: ''
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt fields
