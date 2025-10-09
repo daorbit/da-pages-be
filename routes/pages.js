@@ -61,9 +61,9 @@ const pageValidationRules = [
   body('editorType')
     .notEmpty()
     .withMessage('Editor type is required')
-    .isIn(['markdown', 'wysiwyg'])
-    .withMessage('Editor type must be either markdown or wysiwyg'),
-  
+    .isIn(['summernote', 'quill'])
+    .withMessage('Editor type must be either summernote or quill'),
+
   body('slug')
     .optional()
     .trim()

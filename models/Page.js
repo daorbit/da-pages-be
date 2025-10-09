@@ -38,8 +38,8 @@ const pageSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Editor type is required'],
     enum: {
-      values: ['markdown', 'wysiwyg'],
-      message: 'Editor type must be either markdown or wysiwyg'
+      values: ['quill', 'summernote'],
+      message: 'Editor type must be either quill or summernote'
     }
   },
   slug: {
