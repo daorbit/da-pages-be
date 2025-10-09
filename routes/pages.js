@@ -71,8 +71,7 @@ const pageValidationRules = [
     .withMessage('Slug cannot be more than 100 characters'),
   
   body('content')
-    .notEmpty()
-    .withMessage('Content is required')
+    .optional()
 ];
 
 // GET /api/pages - Get all pages
