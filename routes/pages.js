@@ -47,6 +47,12 @@ const pageValidationRules = [
     .isURL()
     .withMessage('Thumbnail URL must be a valid URL'),
   
+  body('audioUrl')
+    .optional()
+    .trim()
+    .isURL()
+    .withMessage('Audio URL must be a valid URL'),
+  
   body('groups')
     .optional()
     .isArray()

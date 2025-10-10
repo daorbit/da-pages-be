@@ -19,6 +19,10 @@ const pageSchema = new mongoose.Schema({
     required: [true, 'Image URL is required'],
     trim: true
   },
+  audioUrl: {
+    type: String,
+    trim: true
+  },
   thumbnailUrl: {
     type: String,
     required: [true, 'Thumbnail URL is required'],
