@@ -86,11 +86,14 @@ router.get('/images', async (req, res) => {
       });
     }
 
+    const { limit = 10, next_cursor } = req.query;
+
     const response = await axios.get(
       `https://api.cloudinary.com/v1_1/${cloudName}/resources/image`,
       {
         params: {
-          max_results: 100,
+          max_results: parseInt(limit),
+          next_cursor: next_cursor || undefined,
           type: 'upload'
         },
         auth: {
@@ -102,7 +105,9 @@ router.get('/images', async (req, res) => {
 
     res.json({
       message: 'Images retrieved successfully',
-      images: response.data.resources || []
+      images: response.data.resources || [],
+      next_cursor: response.data.next_cursor,
+      has_more: !!response.data.next_cursor
     });
   } catch (error) {
     console.error('Failed to fetch images from Cloudinary:', error.response?.data || error.message);
