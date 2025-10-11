@@ -37,7 +37,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       'http://localhost:3000',
       'https://da-admin-dynamic-pages.vercel.app',
-      'http://localhost:3001'
+      'http://localhost:3001',
+      'https://techodio.daorbit.in/',
+      'https://techodio.daorbit.in',
     ];
 
 const corsOptions = {
