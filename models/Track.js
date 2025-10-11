@@ -45,7 +45,8 @@ const trackSchema = new mongoose.Schema({
   playlists: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Playlist'
-  }],
+  }]
+}, {
   timestamps: true // Adds createdAt and updatedAt fields
 });
 
