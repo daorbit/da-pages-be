@@ -47,7 +47,7 @@ const trackSchema = new mongoose.Schema({
     ref: 'Playlist'
   }]
 }, {
-  timestamps: true // Adds createdAt and updatedAt fields
+  timestamps: true
 });
 
 // Index for better query performance
