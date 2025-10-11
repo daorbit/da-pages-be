@@ -49,9 +49,7 @@ const pageValidationRules = [
   
   body('audioUrl')
     .optional()
-    .trim()
-    .isURL()
-    .withMessage('Audio URL must be a valid URL'),
+    .trim(),
   
   body('groups')
     .optional()
