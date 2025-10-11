@@ -87,7 +87,7 @@ router.get('/', async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Build query
-    let query = {};
+    let query = { isPublic: true };
 
     if (createdBy) {
       query.createdBy = createdBy;
