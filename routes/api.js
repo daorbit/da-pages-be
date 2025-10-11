@@ -113,4 +113,52 @@ router.get('/images', async (req, res) => {
   }
 });
 
+// Delete image from Cloudinary
+router.delete('/images/:publicId', async (req, res) => {
+  try {
+    const { publicId } = req.params;
+    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.VITE_CLOUDINARY_API_KEY;
+    const apiSecret = process.env.VITE_CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error'
+      });
+    }
+
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
+      {
+        public_id: publicId
+      },
+      {
+        auth: {
+          username: apiKey,
+          password: apiSecret
+        }
+      }
+    );
+
+    if (response.data.result === 'ok') {
+      res.json({
+        message: 'Image deleted successfully',
+        publicId
+      });
+    } else {
+      res.status(400).json({
+        error: 'Failed to delete image',
+        message: 'Cloudinary delete operation failed'
+      });
+    }
+  } catch (error) {
+    console.error('Failed to delete image from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to delete image',
+      message: error.response?.data?.message || 'Internal server error'
+    });
+  }
+});
+
 export default router;
