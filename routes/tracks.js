@@ -180,7 +180,7 @@ router.post('/',
         try {
           await Playlist.findByIdAndUpdate(
             trackData.playlistId,
-            { $addToSet: { tracks: track._id } } // $addToSet prevents duplicates
+            { $addToSet: { tracks: track._id }, $inc: { trackCount: 1 } } // $addToSet prevents duplicates
           );
           // Also update track's playlists field
           track.playlists = [trackData.playlistId];
@@ -241,7 +241,7 @@ router.put('/:id',
           try {
             await Playlist.findByIdAndUpdate(
               playlistId,
-              { $pull: { tracks: id } }
+              { $pull: { tracks: id }, $inc: { trackCount: -1 } }
             );
           } catch (playlistError) {
             console.error(`Error removing track from playlist ${playlistId}:`, playlistError);
@@ -253,7 +253,7 @@ router.put('/:id',
           try {
             await Playlist.findByIdAndUpdate(
               updateData.playlistId,
-              { $addToSet: { tracks: id } }
+              { $addToSet: { tracks: id }, $inc: { trackCount: 1 } }
             );
             track.playlists = [updateData.playlistId];
           } catch (playlistError) {
