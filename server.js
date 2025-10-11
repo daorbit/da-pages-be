@@ -11,6 +11,7 @@ import connectDB from './config/database.js';
 // Import routes
 import healthRoutes from './routes/health.js';
 import apiRoutes from './routes/api.js';
+import authRoutes from './routes/auth.js';
 import pagesRoutes from './routes/pages.js';
 import tracksRoutes from './routes/tracks.js';
 import playlistsRoutes from './routes/playlists.js';
@@ -58,6 +59,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/tracks', tracksRoutes);
 app.use('/api/playlists', playlistsRoutes);

@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
+import { authenticate } from '../middleware/index.js';
 import Track from '../models/Track.js';
 
 const router = express.Router();
@@ -165,6 +166,7 @@ router.get('/:id',
 
 // POST /api/tracks - Create a new track
 router.post('/',
+  authenticate,
   trackValidationRules,
   handleValidationErrors,
   async (req, res) => {
@@ -208,6 +210,7 @@ router.post('/',
 
 // PUT /api/tracks/:id - Update a track
 router.put('/:id',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid track ID'),
   trackValidationRules,
   handleValidationErrors,
@@ -282,6 +285,7 @@ router.put('/:id',
 
 // DELETE /api/tracks/:id - Delete a track
 router.delete('/:id',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid track ID'),
   handleValidationErrors,
   async (req, res) => {

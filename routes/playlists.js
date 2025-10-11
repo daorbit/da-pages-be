@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
+import { authenticate } from '../middleware/index.js';
 import Playlist from '../models/Playlist.js';
 
 const router = express.Router();
@@ -175,6 +176,7 @@ router.get('/:id',
 
 // POST /api/playlists - Create a new playlist
 router.post('/',
+  authenticate,
   playlistValidationRules,
   handleValidationErrors,
   async (req, res) => {
@@ -205,6 +207,7 @@ router.post('/',
 
 // PUT /api/playlists/:id - Update a playlist
 router.put('/:id',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid playlist ID'),
   playlistValidationRules,
   handleValidationErrors,
@@ -244,6 +247,7 @@ router.put('/:id',
 
 // DELETE /api/playlists/:id - Delete a playlist
 router.delete('/:id',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid playlist ID'),
   handleValidationErrors,
   async (req, res) => {
@@ -277,6 +281,7 @@ router.delete('/:id',
 
 // PUT /api/playlists/:id/tracks - Add tracks to playlist
 router.put('/:id/tracks',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid playlist ID'),
   body('trackIds').isArray().withMessage('Track IDs must be an array'),
   handleValidationErrors,
@@ -332,6 +337,7 @@ router.put('/:id/tracks',
 
 // DELETE /api/playlists/:id/tracks/:trackId - Remove track from playlist
 router.delete('/:id/tracks/:trackId',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid playlist ID'),
   param('trackId').isMongoId().withMessage('Invalid track ID'),
   handleValidationErrors,

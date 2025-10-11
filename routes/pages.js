@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
+import { authenticate } from '../middleware/index.js';
 import Page from '../models/Page.js';
 
 const router = express.Router();
@@ -170,6 +171,7 @@ router.get('/:slug',
 
 // POST /api/pages - Create a new page
 router.post('/', 
+  authenticate,
   pageValidationRules,
   handleValidationErrors,
   async (req, res) => {
@@ -217,6 +219,7 @@ router.post('/',
 
 // PUT /api/pages/:id - Update a page
 router.put('/:id',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid page ID'),
   pageValidationRules,
   handleValidationErrors,
@@ -279,6 +282,7 @@ router.put('/:id',
 
 // DELETE /api/pages/:id - Delete a page
 router.delete('/:id',
+  authenticate,
   param('id').isMongoId().withMessage('Invalid page ID'),
   handleValidationErrors,
   async (req, res) => {
