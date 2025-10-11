@@ -67,21 +67,10 @@ const trackValidationRules = [
     .isURL()
     .withMessage('Audio URL must be a valid URL'),
 
-  body('playlists')
+  body('playlistId')
     .optional()
-    .isArray()
-    .withMessage('Playlists must be an array')
-    .custom((value) => {
-      if (value && value.length > 0) {
-        // Validate each playlist ID is a valid MongoDB ObjectId
-        for (const playlistId of value) {
-          if (!/^[0-9a-fA-F]{24}$/.test(playlistId)) {
-            throw new Error('Invalid playlist ID format');
-          }
-        }
-      }
-      return true;
-    })
+    .isMongoId()
+    .withMessage('Invalid playlist ID'),
 ];
 
 // GET /api/tracks - Get all tracks
@@ -185,19 +174,19 @@ router.post('/',
       const track = new Track(trackData);
       await track.save();
 
-      // Add track to playlists if playlistIds are provided
-      if (trackData.playlists && trackData.playlists.length > 0) {
+      // Add track to playlist if playlistId is provided
+      if (trackData.playlistId) {
         const Playlist = (await import('../models/Playlist.js')).default;
-        for (const playlistId of trackData.playlists) {
-          try {
-            await Playlist.findByIdAndUpdate(
-              playlistId,
-              { $addToSet: { tracks: track._id } } // $addToSet prevents duplicates
-            );
-          } catch (playlistError) {
-            console.error(`Error adding track to playlist ${playlistId}:`, playlistError);
-            // Continue with other playlists
-          }
+        try {
+          await Playlist.findByIdAndUpdate(
+            trackData.playlistId,
+            { $addToSet: { tracks: track._id } } // $addToSet prevents duplicates
+          );
+          // Also update track's playlists field
+          track.playlists = [trackData.playlistId];
+          await track.save();
+        } catch (playlistError) {
+          console.error(`Error adding track to playlist ${trackData.playlistId}:`, playlistError);
         }
       }
 
@@ -242,15 +231,13 @@ router.put('/:id',
         { new: true, runValidators: true }
       );
 
-      // Handle playlist changes
-      if (updateData.playlists !== undefined) {
+      // Handle playlist change
+      if (updateData.playlistId !== undefined) {
         const Playlist = (await import('../models/Playlist.js')).default;
         const oldPlaylists = currentTrack.playlists || [];
-        const newPlaylists = updateData.playlists || [];
-
-        // Remove track from playlists that are no longer selected
-        const playlistsToRemove = oldPlaylists.filter(p => !newPlaylists.includes(p.toString()));
-        for (const playlistId of playlistsToRemove) {
+        
+        // Remove track from old playlists
+        for (const playlistId of oldPlaylists) {
           try {
             await Playlist.findByIdAndUpdate(
               playlistId,
@@ -261,17 +248,19 @@ router.put('/:id',
           }
         }
 
-        // Add track to new playlists
-        const playlistsToAdd = newPlaylists.filter(p => !oldPlaylists.some(op => op.toString() === p));
-        for (const playlistId of playlistsToAdd) {
+        // Add track to new playlist if provided
+        if (updateData.playlistId) {
           try {
             await Playlist.findByIdAndUpdate(
-              playlistId,
+              updateData.playlistId,
               { $addToSet: { tracks: id } }
             );
+            track.playlists = [updateData.playlistId];
           } catch (playlistError) {
-            console.error(`Error adding track to playlist ${playlistId}:`, playlistError);
+            console.error(`Error adding track to playlist ${updateData.playlistId}:`, playlistError);
           }
+        } else {
+          track.playlists = [];
         }
       }
 
