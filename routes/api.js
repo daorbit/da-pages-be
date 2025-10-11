@@ -75,9 +75,9 @@ router.get('/pages/:id', (req, res) => {
 // Get uploaded images from Cloudinary
 router.get('/images', async (req, res) => {
   try {
-    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.VITE_CLOUDINARY_API_KEY;
-    const apiSecret = process.env.VITE_CLOUDINARY_API_SECRET;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
     if (!cloudName || !apiKey || !apiSecret) {
       return res.status(500).json({
@@ -117,9 +117,9 @@ router.get('/images', async (req, res) => {
 router.delete('/images/:publicId', async (req, res) => {
   try {
     const { publicId } = req.params;
-    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.VITE_CLOUDINARY_API_KEY;
-    const apiSecret = process.env.VITE_CLOUDINARY_API_SECRET;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
     if (!cloudName || !apiKey || !apiSecret) {
       return res.status(500).json({
