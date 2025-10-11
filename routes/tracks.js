@@ -149,7 +149,7 @@ router.get('/:id',
     try {
       const { id } = req.params;
 
-      const track = await Track.findById(id);
+      const track = await Track.findById(id).populate('playlists');
 
       if (!track) {
         return res.status(404).json({
@@ -184,6 +184,22 @@ router.post('/',
       const track = new Track(trackData);
       await track.save();
 
+      // Add track to playlists if playlistIds are provided
+      if (trackData.playlists && trackData.playlists.length > 0) {
+        const Playlist = (await import('../models/Playlist.js')).default;
+        for (const playlistId of trackData.playlists) {
+          try {
+            await Playlist.findByIdAndUpdate(
+              playlistId,
+              { $addToSet: { tracks: track._id } } // $addToSet prevents duplicates
+            );
+          } catch (playlistError) {
+            console.error(`Error adding track to playlist ${playlistId}:`, playlistError);
+            // Continue with other playlists
+          }
+        }
+      }
+
       res.status(201).json({
         success: true,
         message: 'Track created successfully',
@@ -210,17 +226,52 @@ router.put('/:id',
       const { id } = req.params;
       const updateData = req.body;
 
+      // Get the current track to compare playlists
+      const currentTrack = await Track.findById(id);
+      if (!currentTrack) {
+        return res.status(404).json({
+          success: false,
+          message: 'Track not found'
+        });
+      }
+
       const track = await Track.findByIdAndUpdate(
         id,
         updateData,
         { new: true, runValidators: true }
       );
 
-      if (!track) {
-        return res.status(404).json({
-          success: false,
-          message: 'Track not found'
-        });
+      // Handle playlist changes
+      if (updateData.playlists !== undefined) {
+        const Playlist = (await import('../models/Playlist.js')).default;
+        const oldPlaylists = currentTrack.playlists || [];
+        const newPlaylists = updateData.playlists || [];
+
+        // Remove track from playlists that are no longer selected
+        const playlistsToRemove = oldPlaylists.filter(p => !newPlaylists.includes(p.toString()));
+        for (const playlistId of playlistsToRemove) {
+          try {
+            await Playlist.findByIdAndUpdate(
+              playlistId,
+              { $pull: { tracks: id } }
+            );
+          } catch (playlistError) {
+            console.error(`Error removing track from playlist ${playlistId}:`, playlistError);
+          }
+        }
+
+        // Add track to new playlists
+        const playlistsToAdd = newPlaylists.filter(p => !oldPlaylists.some(op => op.toString() === p));
+        for (const playlistId of playlistsToAdd) {
+          try {
+            await Playlist.findByIdAndUpdate(
+              playlistId,
+              { $addToSet: { tracks: id } }
+            );
+          } catch (playlistError) {
+            console.error(`Error adding track to playlist ${playlistId}:`, playlistError);
+          }
+        }
       }
 
       res.json({
