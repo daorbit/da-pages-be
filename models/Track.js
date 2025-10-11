@@ -41,8 +41,11 @@ const trackSchema = new mongoose.Schema({
   audioUrl: {
     type: String,
     trim: true
-  }
-}, {
+  },
+  playlists: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Playlist'
+  }],
   timestamps: true // Adds createdAt and updatedAt fields
 });
 

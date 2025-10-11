@@ -65,7 +65,23 @@ const trackValidationRules = [
     .optional()
     .trim()
     .isURL()
-    .withMessage('Audio URL must be a valid URL')
+    .withMessage('Audio URL must be a valid URL'),
+
+  body('playlists')
+    .optional()
+    .isArray()
+    .withMessage('Playlists must be an array')
+    .custom((value) => {
+      if (value && value.length > 0) {
+        // Validate each playlist ID is a valid MongoDB ObjectId
+        for (const playlistId of value) {
+          if (!/^[0-9a-fA-F]{24}$/.test(playlistId)) {
+            throw new Error('Invalid playlist ID format');
+          }
+        }
+      }
+      return true;
+    })
 ];
 
 // GET /api/tracks - Get all tracks
