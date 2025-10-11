@@ -133,11 +133,8 @@ router.delete('/images/:publicId', async (req, res) => {
       });
     }
 
-    const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
-      {
-        public_id: publicId
-      },
+    const response = await axios.delete(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload/${publicId}`,
       {
         auth: {
           username: apiKey,
@@ -146,7 +143,7 @@ router.delete('/images/:publicId', async (req, res) => {
       }
     );
 
-    if (response.data.result === 'ok') {
+    if (response.status === 200) {
       res.json({
         message: 'Image deleted successfully',
         publicId
