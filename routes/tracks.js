@@ -112,6 +112,7 @@ router.get('/', async (req, res) => {
 
     // Get tracks with pagination
     const tracks = await Track.find(query)
+      .populate('playlists')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
