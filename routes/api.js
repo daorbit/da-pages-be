@@ -1,4 +1,5 @@
 import express from 'express';
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -69,6 +70,47 @@ router.get('/pages/:id', (req, res) => {
     message: 'Page retrieved successfully',
     page
   });
+});
+
+// Get uploaded images from Cloudinary
+router.get('/images', async (req, res) => {
+  try {
+    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.VITE_CLOUDINARY_API_KEY;
+    const apiSecret = process.env.VITE_CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error'
+      });
+    }
+
+    const response = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image`,
+      {
+        params: {
+          max_results: 100,
+          type: 'upload'
+        },
+        auth: {
+          username: apiKey,
+          password: apiSecret
+        }
+      }
+    );
+
+    res.json({
+      message: 'Images retrieved successfully',
+      images: response.data.resources || []
+    });
+  } catch (error) {
+    console.error('Failed to fetch images from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch images',
+      message: error.response?.data?.message || 'Internal server error'
+    });
+  }
 });
 
 export default router;
