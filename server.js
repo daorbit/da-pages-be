@@ -41,6 +41,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:3001',
       'https://techodio.daorbit.in/',
       'https://techodio.daorbit.in',
+      'https://cms.daorbit.in/',
+      'https://cms.daorbit.in',
     ];
 
 const corsOptions = {
