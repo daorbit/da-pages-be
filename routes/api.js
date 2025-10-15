@@ -173,17 +173,17 @@ router.get('/audios', async (req, res) => {
     if (!cloudName || !apiKey || !apiSecret) {
       return res.status(500).json({
         error: 'Cloudinary configuration missing',
-        message: 'Server configuration error'
+        message: 'Server configuration error',
       });
     }
 
     const limit = parseInt(req.query.limit) || 10;
     const nextCursor = req.query.next_cursor;
 
+    // ✅ Cloudinary Search API uses "expression"
     const params = new URLSearchParams({
-      type: 'upload',
-      resource_type: 'video',
-      folder: 'da-orbit-audio',
+      expression: 'folder:da-orbit-audio/*', // 👈 filter only files inside this folder
+      resource_type: 'video',                // 👈 audio files are stored as "video"
       max_results: limit.toString(),
     });
 
@@ -203,13 +203,11 @@ router.get('/audios', async (req, res) => {
       }
     );
 
-    const audios = response.data.resources
-      .filter(resource => resource.resource_type === 'video' && resource.public_id.startsWith('da-orbit-audio/'))
-      .map(resource => ({
-        public_id: resource.public_id,
-        secure_url: resource.secure_url,
-        created_at: resource.created_at,
-      }));
+    const audios = response.data.resources.map(resource => ({
+      public_id: resource.public_id,
+      secure_url: resource.secure_url,
+      created_at: resource.created_at,
+    }));
 
     res.json({
       audios,
@@ -217,16 +215,15 @@ router.get('/audios', async (req, res) => {
       hasMore: !!response.data.next_cursor,
     });
   } catch (error) {
-    console.error('Failed to fetch audios from Cloudinary:', error.response?.data || error.message);
+    console.error('❌ Failed to fetch audios from Cloudinary:', error.response?.data || error.message);
     res.status(500).json({
       error: 'Failed to fetch audios',
-      message: error.response?.data?.message || 'Internal server error'
+      message: error.response?.data?.message || 'Internal server error',
     });
   }
 });
 
-// Delete audio from Cloudinary
-router.delete('/audios/:publicId', async (req, res) => {
+ router.delete('/audios/:publicId', async (req, res) => {
   try {
     const { publicId } = req.params;
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
