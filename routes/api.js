@@ -163,4 +163,110 @@ router.delete('/images/:publicId', async (req, res) => {
   }
 });
 
+// Get uploaded audios from Cloudinary
+router.get('/audios', async (req, res) => {
+  try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error'
+      });
+    }
+
+    const limit = parseInt(req.query.limit) || 10;
+    const nextCursor = req.query.next_cursor;
+
+    const params = new URLSearchParams({
+      type: 'upload',
+      resource_type: 'video',
+      folder: 'da-orbit-audio',
+      max_results: limit.toString(),
+    });
+
+    if (nextCursor) {
+      params.append('next_cursor', nextCursor);
+    }
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+    const response = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+      {
+        params,
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    const audios = response.data.resources.map(resource => ({
+      public_id: resource.public_id,
+      secure_url: resource.secure_url,
+      created_at: resource.created_at,
+    }));
+
+    res.json({
+      audios,
+      nextCursor: response.data.next_cursor,
+      hasMore: !!response.data.next_cursor,
+    });
+  } catch (error) {
+    console.error('Failed to fetch audios from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch audios',
+      message: error.response?.data?.message || 'Internal server error'
+    });
+  }
+});
+
+// Delete audio from Cloudinary
+router.delete('/audios/:publicId', async (req, res) => {
+  try {
+    const { publicId } = req.params;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error'
+      });
+    }
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+    const response = await axios.delete(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${publicId}`,
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    if (response.data.result === 'ok') {
+      res.json({
+        message: 'Audio deleted successfully',
+        publicId: publicId
+      });
+    } else {
+      res.status(400).json({
+        error: 'Failed to delete audio',
+        message: 'Cloudinary delete operation failed'
+      });
+    }
+  } catch (error) {
+    console.error('Failed to delete audio from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to delete audio',
+      message: error.response?.data?.message || 'Internal server error'
+    });
+  }
+});
+
 export default router;
