@@ -164,6 +164,59 @@ router.delete('/images/:publicId', async (req, res) => {
   }
 });
 
+// Rename image in Cloudinary
+router.put('/images/:publicId', async (req, res) => {
+  try {
+    const { publicId } = req.params;
+    const { newName, invalidate = false } = req.body;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error'
+      });
+    }
+
+    if (!newName) {
+      return res.status(400).json({
+        error: 'New name is required',
+        message: 'Please provide a new name for the image'
+      });
+    }
+
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/rename`,
+      {
+        from_public_id: publicId,
+        to_public_id: newName,
+        invalidate: invalidate
+      },
+      {
+        auth: {
+          username: apiKey,
+          password: apiSecret
+        }
+      }
+    );
+
+    res.json({
+      message: 'Image renamed successfully',
+      oldPublicId: publicId,
+      newPublicId: newName,
+      url: response.data.secure_url
+    });
+  } catch (error) {
+    console.error('Failed to rename image in Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to rename image',
+      message: error.response?.data?.message || 'Internal server error'
+    });
+  }
+});
+
 // Get uploaded audios from Cloudinary
 router.get('/audios', authenticate, async (req, res) => {
   try {
@@ -266,6 +319,60 @@ router.get('/audios', authenticate, async (req, res) => {
     console.error('Failed to delete audio from Cloudinary:', error.response?.data || error.message);
     res.status(500).json({
       error: 'Failed to delete audio',
+      message: error.response?.data?.message || 'Internal server error'
+    });
+  }
+});
+
+// Rename audio in Cloudinary
+router.put('/audios/:publicId', authenticate, async (req, res) => {
+  try {
+    const { publicId } = req.params;
+    const { newName, invalidate = false } = req.body;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error'
+      });
+    }
+
+    if (!newName) {
+      return res.status(400).json({
+        error: 'New name is required',
+        message: 'Please provide a new name for the audio'
+      });
+    }
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/video/rename`,
+      {
+        from_public_id: publicId,
+        to_public_id: newName,
+        invalidate: invalidate
+      },
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    res.json({
+      message: 'Audio renamed successfully',
+      oldPublicId: publicId,
+      newPublicId: newName,
+      url: response.data.secure_url
+    });
+  } catch (error) {
+    console.error('Failed to rename audio in Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to rename audio',
       message: error.response?.data?.message || 'Internal server error'
     });
   }
