@@ -276,6 +276,9 @@ router.put('/audios/*', authenticate, async (req, res) => {
   try {
     const publicId = req.params[0]; // Get the full path after /audios/
     const { name } = req.body;
+
+    console.log('Update audio name request:', { publicId, name });
+
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -296,16 +299,20 @@ router.put('/audios/*', authenticate, async (req, res) => {
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    // Update the asset context with custom name
-    const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${publicId}/context`,
-      {
-        custom_name: name.trim()
-      },
+    // Update the asset using explicit API with context
+    const formData = new URLSearchParams();
+    formData.append('public_id', publicId);
+    formData.append('context', `custom_name=${encodeURIComponent(name.trim())}`);
+    formData.append('type', 'upload');
+    formData.append('resource_type', 'video');
+
+    await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/explicit`,
+      formData,
       {
         headers: {
           Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
       }
     );
@@ -316,10 +323,16 @@ router.put('/audios/*', authenticate, async (req, res) => {
       name: name.trim()
     });
   } catch (error) {
-    console.error('Failed to update audio name:', error.response?.data || error.message);
+    console.error('Failed to update audio name:', {
+      publicId,
+      name: name.trim(),
+      error: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     res.status(500).json({
       error: 'Failed to update audio name',
-      message: error.response?.data?.message || 'Internal server error'
+      message: error.response?.data?.message || error.message || 'Internal server error'
     });
   }
 });
