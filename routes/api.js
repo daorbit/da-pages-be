@@ -186,6 +186,7 @@ router.get('/audios', authenticate, async (req, res) => {
       expression: 'folder:da-orbit-audio/*', // 👈 filter only files inside this folder
       resource_type: 'video',                // 👈 audio files are stored as "video"
       max_results: limit.toString(),
+      with_field: 'context',                 // 👈 include context field in response
     });
 
     if (nextCursor) {
@@ -271,62 +272,9 @@ router.get('/audios', authenticate, async (req, res) => {
 });
 
 // Update audio name (add custom name to context)
-router.put('/audios/:publicId', authenticate, async (req, res) => {
+router.put('/audios/*', authenticate, async (req, res) => {
   try {
-    const { publicId } = req.params;
-    const { name } = req.body;
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-    if (!cloudName || !apiKey || !apiSecret) {
-      return res.status(500).json({
-        error: 'Cloudinary configuration missing',
-        message: 'Server configuration error'
-      });
-    }
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return res.status(400).json({
-        error: 'Invalid name',
-        message: 'Name is required and must be a non-empty string'
-      });
-    }
-
-    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-
-    // Update the asset context with custom name
-    const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${publicId}/context`,
-      {
-        custom_name: name.trim()
-      },
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/json'
-        },
-      }
-    );
-
-    res.json({
-      message: 'Audio name updated successfully',
-      publicId: publicId,
-      name: name.trim()
-    });
-  } catch (error) {
-    console.error('Failed to update audio name:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Failed to update audio name',
-      message: error.response?.data?.message || 'Internal server error'
-    });
-  }
-});
-
-// Update audio name (add custom name to context)
-router.put('/audios/:publicId', authenticate, async (req, res) => {
-  try {
-    const { publicId } = req.params;
+    const publicId = req.params[0]; // Get the full path after /audios/
     const { name } = req.body;
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
