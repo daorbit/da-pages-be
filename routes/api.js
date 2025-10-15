@@ -299,23 +299,28 @@ router.put('/audios/*', authenticate, async (req, res) => {
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    // Update the asset using explicit API with context
-    const formData = new URLSearchParams();
-    formData.append('public_id', publicId);
-    formData.append('context', `custom_name=${encodeURIComponent(name.trim())}`);
-    formData.append('type', 'upload');
-    formData.append('resource_type', 'video');
+    // Update the asset context using the context API
+    const contextData = {
+      custom_name: name.trim()
+    };
+
+    console.log('Making Cloudinary context update request:', {
+      url: `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${encodeURIComponent(publicId)}/context`,
+      context: contextData
+    });
 
     await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/explicit`,
-      formData,
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${encodeURIComponent(publicId)}/context`,
+      contextData,
       {
         headers: {
           Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/json'
         },
       }
     );
+
+    console.log('Cloudinary context update successful');
 
     res.json({
       message: 'Audio name updated successfully',
