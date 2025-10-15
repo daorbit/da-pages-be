@@ -203,11 +203,13 @@ router.get('/audios', async (req, res) => {
       }
     );
 
-    const audios = response.data.resources.map(resource => ({
-      public_id: resource.public_id,
-      secure_url: resource.secure_url,
-      created_at: resource.created_at,
-    }));
+    const audios = response.data.resources
+      .filter(resource => resource.resource_type === 'video' && resource.public_id.startsWith('da-orbit-audio/'))
+      .map(resource => ({
+        public_id: resource.public_id,
+        secure_url: resource.secure_url,
+        created_at: resource.created_at,
+      }));
 
     res.json({
       audios,
