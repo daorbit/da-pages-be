@@ -168,7 +168,7 @@ router.delete('/images/:publicId', async (req, res) => {
 router.put('/images/:publicId', async (req, res) => {
   try {
     const { publicId } = req.params;
-    const { newName, invalidate = false } = req.body;
+    const { displayName } = req.body;
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -180,19 +180,17 @@ router.put('/images/:publicId', async (req, res) => {
       });
     }
 
-    if (!newName) {
+    if (!displayName) {
       return res.status(400).json({
-        error: 'New name is required',
-        message: 'Please provide a new name for the image'
+        error: 'Display name is required',
+        message: 'Please provide a display name for the image'
       });
     }
 
     const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/rename`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload/${publicId}`,
       {
-        from_public_id: publicId,
-        to_public_id: newName,
-        invalidate: invalidate
+        display_name: displayName
       },
       {
         auth: {
@@ -203,15 +201,15 @@ router.put('/images/:publicId', async (req, res) => {
     );
 
     res.json({
-      message: 'Image renamed successfully',
-      oldPublicId: publicId,
-      newPublicId: newName,
-      url: response.data.secure_url
+      message: 'Image display name updated successfully',
+      publicId,
+      displayName,
+      resource: response.data
     });
   } catch (error) {
-    console.error('Failed to rename image in Cloudinary:', error.response?.data || error.message);
+    console.error('Failed to update image display name in Cloudinary:', error.response?.data || error.message);
     res.status(500).json({
-      error: 'Failed to rename image',
+      error: 'Failed to update image display name',
       message: error.response?.data?.message || 'Internal server error'
     });
   }
@@ -262,7 +260,7 @@ router.get('/audios', authenticate, async (req, res) => {
       public_id: resource.public_id,
       secure_url: resource.secure_url,
       created_at: resource.created_at,
-      name: resource.context?.custom_name || null,
+      name: resource.display_name || null,
     }));
 
     res.json({
@@ -328,7 +326,7 @@ router.get('/audios', authenticate, async (req, res) => {
 router.put('/audios/:publicId', authenticate, async (req, res) => {
   try {
     const { publicId } = req.params;
-    const { newName, invalidate = false } = req.body;
+    const { displayName } = req.body;
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -340,21 +338,19 @@ router.put('/audios/:publicId', authenticate, async (req, res) => {
       });
     }
 
-    if (!newName) {
+    if (!displayName) {
       return res.status(400).json({
-        error: 'New name is required',
-        message: 'Please provide a new name for the audio'
+        error: 'Display name is required',
+        message: 'Please provide a display name for the audio'
       });
     }
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
     const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/video/rename`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${publicId}`,
       {
-        from_public_id: publicId,
-        to_public_id: newName,
-        invalidate: invalidate
+        display_name: displayName
       },
       {
         headers: {
@@ -364,15 +360,15 @@ router.put('/audios/:publicId', authenticate, async (req, res) => {
     );
 
     res.json({
-      message: 'Audio renamed successfully',
-      oldPublicId: publicId,
-      newPublicId: newName,
-      url: response.data.secure_url
+      message: 'Audio display name updated successfully',
+      publicId,
+      displayName,
+      resource: response.data
     });
   } catch (error) {
-    console.error('Failed to rename audio in Cloudinary:', error.response?.data || error.message);
+    console.error('Failed to update audio display name in Cloudinary:', error.response?.data || error.message);
     res.status(500).json({
-      error: 'Failed to rename audio',
+      error: 'Failed to update audio display name',
       message: error.response?.data?.message || 'Internal server error'
     });
   }
