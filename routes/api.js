@@ -207,6 +207,7 @@ router.get('/audios', async (req, res) => {
       public_id: resource.public_id,
       secure_url: resource.secure_url,
       created_at: resource.created_at,
+      name: resource.context?.custom_name || null,
     }));
 
     res.json({
