@@ -16,6 +16,9 @@ import pagesRoutes from './routes/pages.js';
 import tracksRoutes from './routes/tracks.js';
 import playlistsRoutes from './routes/playlists.js';
 
+// Import Swagger
+import { swaggerUi, specs } from './swagger.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -66,6 +69,9 @@ app.use('/api/pages', pagesRoutes);
 app.use('/api/tracks', tracksRoutes);
 app.use('/api/playlists', playlistsRoutes);
 app.use('/api', apiRoutes);
+
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Root endpoint
 app.get('/', (req, res) => {
