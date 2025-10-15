@@ -295,10 +295,10 @@ router.put('/audios/:publicId', async (req, res) => {
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
     // Update the asset context with custom name
-    const response = await axios.put(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${publicId}`,
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload/${publicId}/context`,
       {
-        context: `custom_name=${name.trim()}`
+        custom_name: name.trim()
       },
       {
         headers: {
