@@ -1,5 +1,6 @@
 import express from 'express';
 import axios from 'axios';
+import { authenticate } from '../middleware/index.js';
 
 const router = express.Router();
 
@@ -164,7 +165,7 @@ router.delete('/images/:publicId', async (req, res) => {
 });
 
 // Get uploaded audios from Cloudinary
-router.get('/audios', async (req, res) => {
+router.get('/audios', authenticate, async (req, res) => {
   try {
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
@@ -224,7 +225,7 @@ router.get('/audios', async (req, res) => {
   }
 });
 
- router.delete('/audios/:publicId', async (req, res) => {
+ router.delete('/audios/:publicId', authenticate, async (req, res) => {
   try {
     const { publicId } = req.params;
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -270,7 +271,7 @@ router.get('/audios', async (req, res) => {
 });
 
 // Update audio name (add custom name to context)
-router.put('/audios/:publicId', async (req, res) => {
+router.put('/audios/:publicId', authenticate, async (req, res) => {
   try {
     const { publicId } = req.params;
     const { name } = req.body;
