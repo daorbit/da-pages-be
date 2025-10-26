@@ -38,6 +38,10 @@ const trackSchema = new mongoose.Schema({
     trim: true,
     maxlength: [50, 'Category cannot be more than 50 characters']
   },
+  trending: {
+    type: Boolean,
+    default: false
+  },
   audioUrl: {
     type: String,
     trim: true

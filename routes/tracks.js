@@ -62,6 +62,11 @@ const trackValidationRules = [
     .isLength({ max: 50 })
     .withMessage('Category cannot be more than 50 characters'),
 
+  body('trending')
+    .optional()
+    .isBoolean()
+    .withMessage('Trending must be a boolean value'),
+
   body('audioUrl')
     .optional()
     .trim()
