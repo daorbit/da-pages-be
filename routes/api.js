@@ -215,132 +215,6 @@ router.put('/images/:publicId', async (req, res) => {
   }
 });
 
-// Get audio folders from Cloudinary
-router.get('/audios/folders', authenticate, async (req, res) => {
-  try {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-    if (!cloudName || !apiKey || !apiSecret) {
-      return res.status(500).json({
-        error: 'Cloudinary configuration missing',
-        message: 'Server configuration error',
-      });
-    }
-
-    // Use Cloudinary Search API (POST) to get all resources in da-orbit-audio
-    const body = {
-      expression: 'folder:da-orbit-audio/*',
-      resource_type: 'video',
-      max_results: 500, // Get more results to find all folders
-      with_field: 'context',
-    };
-
-    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-
-    const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
-      body,
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    // Extract unique folders from public_ids
-    const folders = new Set();
-    response.data.resources.forEach(resource => {
-      const publicId = resource.public_id;
-      // public_id format: da-orbit-audio/folder-name/filename
-      const parts = publicId.split('/');
-      if (parts.length >= 3) {
-        folders.add(parts[1]); // folder name is the second part
-      }
-    });
-
-    res.json({
-      folders: Array.from(folders).sort(),
-    });
-  } catch (error) {
-    console.error('❌ Failed to fetch audio folders from Cloudinary:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Failed to fetch audio folders',
-      message: error.response?.data?.message || 'Internal server error',
-    });
-  }
-});
-
-// Get all audio folders recursively from Cloudinary
-router.get('/audios/folders/all', authenticate, async (req, res) => {
-  try {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-    if (!cloudName || !apiKey || !apiSecret) {
-      return res.status(500).json({
-        error: 'Cloudinary configuration missing',
-        message: 'Server configuration error',
-      });
-    }
-
-    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-
-    // Recursive function to get all folders as nested structure
-    const getAllFolders = async (currentPath = 'da-orbit-audio') => {
-      const folders = [];
-
-      try {
-        console.log(`Fetching folders for path: ${currentPath}`);
-        const response = await axios.get(
-          `https://api.cloudinary.com/v1_1/${cloudName}/folders/${currentPath}`,
-          {
-            auth: {
-              username: apiKey,
-              password: apiSecret,
-            },
-          }
-        );
-
-        console.log(`Found ${response.data.folders?.length || 0} folders for ${currentPath}:`, response.data.folders);
-
-        for (const folder of response.data.folders || []) {
-          const folderPath = `${currentPath}/${folder.name}`;
-          
-          // Recursively get subfolders
-          const subfolders = await getAllFolders(folderPath);
-          
-          folders.push({
-            name: folder.name,
-            path: folderPath,
-            subfolders: subfolders,
-          });
-        }
-      } catch (error) {
-        // If folder doesn't exist or has no subfolders, continue
-        console.log(`No subfolders found for ${currentPath}:`, error.response?.data || error.message);
-      }
-
-      return folders;
-    };
-
-    const allFolders = await getAllFolders();
-
-    res.json({
-      folders: allFolders,
-    });
-  } catch (error) {
-    console.error('❌ Failed to fetch all audio folders from Cloudinary:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Failed to fetch all audio folders',
-      message: error.response?.data?.message || 'Internal server error',
-    });
-  }
-});
-
 // Get uploaded audios from Cloudinary
 router.get('/audios', authenticate, async (req, res) => {
   try {
@@ -357,75 +231,32 @@ router.get('/audios', authenticate, async (req, res) => {
 
     const limit = parseInt(req.query.limit) || 10;
     const nextCursor = req.query.next_cursor;
-    const folder = req.query.folder || 'da-orbit-audio'; // Default to da-orbit-audio
 
     // ✅ Cloudinary Search API uses "expression"
-    let expression = `folder:${folder}/*`;
-
-    const body = {
-      expression,
+    const params = new URLSearchParams({
+      expression: 'folder:da-orbit-audio/*', // 👈 filter only files inside this folder
       resource_type: 'video',                // 👈 audio files are stored as "video"
-      max_results: limit,
+      max_results: limit.toString(),
       with_field: 'context',                 // 👈 include context field in response
-    };
+    });
 
     if (nextCursor) {
-      body.next_cursor = nextCursor;
+      params.append('next_cursor', nextCursor);
     }
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    // Fetch audios using Search API
-    const audioResponse = await axios.post(
+    const response = await axios.get(
       `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
-      body,
       {
+        params,
         headers: {
           Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/json',
         },
       }
     );
 
-    // Recursive function to get nested subfolders
-    const getNestedSubfolders = async (currentFolder) => {
-      const folders = [];
-      
-      try {
-        const folderResponse = await axios.get(
-          `https://api.cloudinary.com/v1_1/${cloudName}/folders/${currentFolder}`,
-          {
-            auth: {
-              username: apiKey,
-              password: apiSecret,
-            },
-          }
-        );
-
-        const directSubfolders = folderResponse.data.folders || [];
-        
-        for (const subfolder of directSubfolders) {
-          // Recursively get subfolders of this subfolder
-          const nestedFolders = await getNestedSubfolders(subfolder.path);
-          
-          folders.push({
-            name: subfolder.name,
-            path: subfolder.path,
-            subfolders: nestedFolders,
-          });
-        }
-      } catch (error) {
-        // If folder doesn't exist or has no subfolders, continue
-        console.log(`No subfolders found for ${currentFolder}`);
-      }
-      
-      return folders;
-    };
-
-    // Fetch nested subfolders
-    const subfolders = await getNestedSubfolders(folder);
-
-    const audios = audioResponse.data.resources.map(resource => ({
+    const audios = response.data.resources.map(resource => ({
       public_id: resource.public_id,
       secure_url: resource.secure_url,
       created_at: resource.created_at,
@@ -433,10 +264,9 @@ router.get('/audios', authenticate, async (req, res) => {
     }));
 
     res.json({
-      subfolders,
       audios,
-      nextCursor: audioResponse.data.next_cursor,
-      hasMore: !!audioResponse.data.next_cursor,
+      nextCursor: response.data.next_cursor,
+      hasMore: !!response.data.next_cursor,
     });
   } catch (error) {
     console.error('❌ Failed to fetch audios from Cloudinary:', error.response?.data || error.message);
