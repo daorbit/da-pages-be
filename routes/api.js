@@ -374,4 +374,118 @@ router.put('/audios/:publicId', authenticate, async (req, res) => {
   }
 });
 
+// Get audio folders structure from Cloudinary
+router.get('/audio-folders', authenticate, async (req, res) => {
+  try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error',
+      });
+    }
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+    // First, get all folders under da-orbit-audio
+    const foldersResponse = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/folders/da-orbit-audio`,
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    const folders = foldersResponse.data.folders || [];
+
+    // For each folder, get the audios
+    const folderStructure = await Promise.all(
+      folders.map(async (folder) => {
+        const folderPath = folder.path;
+        const folderName = folder.name;
+
+        // Get audios in this specific folder
+        const audiosResponse = await axios.get(
+          `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+          {
+            params: new URLSearchParams({
+              expression: `folder:${folderPath}/*`,
+              resource_type: 'video',
+              max_results: '500', // Get all audios in folder
+              with_field: 'context',
+            }),
+            headers: {
+              Authorization: `Basic ${auth}`,
+            },
+          }
+        );
+
+        const audios = audiosResponse.data.resources.map(resource => ({
+          public_id: resource.public_id,
+          secure_url: resource.secure_url,
+          created_at: resource.created_at,
+          name: resource.display_name || resource.public_id.split('/').pop(),
+          folder: folderPath,
+        }));
+
+        return {
+          name: folderName,
+          path: folderPath,
+          audios: audios,
+          audioCount: audios.length,
+        };
+      })
+    );
+
+    // Also get audios directly in the root da-orbit-audio folder
+    const rootAudiosResponse = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+      {
+        params: new URLSearchParams({
+          expression: `folder:da-orbit-audio AND -folder:da-orbit-audio/*/*`,
+          resource_type: 'video',
+          max_results: '500',
+          with_field: 'context',
+        }),
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    const rootAudios = rootAudiosResponse.data.resources.map(resource => ({
+      public_id: resource.public_id,
+      secure_url: resource.secure_url,
+      created_at: resource.created_at,
+      name: resource.display_name || resource.public_id.split('/').pop(),
+      folder: 'da-orbit-audio',
+    }));
+
+    if (rootAudios.length > 0) {
+      folderStructure.unshift({
+        name: 'Root',
+        path: 'da-orbit-audio',
+        audios: rootAudios,
+        audioCount: rootAudios.length,
+      });
+    }
+
+    res.json({
+      folders: folderStructure,
+      totalFolders: folderStructure.length,
+      totalAudios: folderStructure.reduce((sum, folder) => sum + folder.audioCount, 0),
+    });
+  } catch (error) {
+    console.error('❌ Failed to fetch audio folders from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch audio folders',
+      message: error.response?.data?.message || 'Internal server error',
+    });
+  }
+});
+
 export default router;
