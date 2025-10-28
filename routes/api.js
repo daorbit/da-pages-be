@@ -273,6 +273,70 @@ router.get('/audios/folders', authenticate, async (req, res) => {
   }
 });
 
+// Get all audio folders recursively from Cloudinary
+router.get('/audios/folders/all', authenticate, async (req, res) => {
+  try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error',
+      });
+    }
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+    // Recursive function to get all folders
+    const getAllFolders = async (currentPath = 'da-orbit-audio') => {
+      const allFolders = [];
+
+      try {
+        const response = await axios.get(
+          `https://api.cloudinary.com/v1_1/${cloudName}/folders/${currentPath}`,
+          {
+            auth: {
+              username: apiKey,
+              password: apiSecret,
+            },
+          }
+        );
+
+        for (const folder of response.data.folders || []) {
+          const folderPath = `${currentPath}/${folder.name}`;
+          allFolders.push({
+            name: folder.name,
+            path: folderPath,
+          });
+
+          // Recursively get subfolders
+          const subFolders = await getAllFolders(folderPath);
+          allFolders.push(...subFolders);
+        }
+      } catch (error) {
+        // If folder doesn't exist or has no subfolders, continue
+        console.log(`No subfolders found for ${currentPath}`);
+      }
+
+      return allFolders;
+    };
+
+    const allFolders = await getAllFolders();
+
+    res.json({
+      folders: allFolders,
+    });
+  } catch (error) {
+    console.error('❌ Failed to fetch all audio folders from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch all audio folders',
+      message: error.response?.data?.message || 'Internal server error',
+    });
+  }
+});
+
 // Get uploaded audios from Cloudinary
 router.get('/audios', authenticate, async (req, res) => {
   try {
