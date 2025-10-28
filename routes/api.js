@@ -229,22 +229,23 @@ router.get('/audios/folders', authenticate, async (req, res) => {
       });
     }
 
-    // Get all resources in da-orbit-audio folder to extract unique folders
-    const params = new URLSearchParams({
+    // Use Cloudinary Search API (POST) to get all resources in da-orbit-audio
+    const body = {
       expression: 'folder:da-orbit-audio/*',
       resource_type: 'video',
-      max_results: '500', // Get more results to find all folders
+      max_results: 500, // Get more results to find all folders
       with_field: 'context',
-    });
+    };
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    const response = await axios.get(
+    const response = await axios.post(
       `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+      body,
       {
-        params,
         headers: {
           Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
         },
       }
     );
@@ -296,25 +297,26 @@ router.get('/audios', authenticate, async (req, res) => {
       expression = `folder:da-orbit-audio/${folder}/*`; // Filter by specific folder
     }
 
-    const params = new URLSearchParams({
+    const body = {
       expression,
       resource_type: 'video',                // 👈 audio files are stored as "video"
-      max_results: limit.toString(),
+      max_results: limit,
       with_field: 'context',                 // 👈 include context field in response
-    });
+    };
 
     if (nextCursor) {
-      params.append('next_cursor', nextCursor);
+      body.next_cursor = nextCursor;
     }
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    const response = await axios.get(
+    const response = await axios.post(
       `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+      body,
       {
-        params,
         headers: {
           Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
         },
       }
     );
