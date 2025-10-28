@@ -387,9 +387,9 @@ router.get('/audios', authenticate, async (req, res) => {
       }
     );
 
-    // Recursive function to get all subfolders
-    const getAllSubfolders = async (currentFolder) => {
-      const allFolders = [];
+    // Recursive function to get nested subfolders
+    const getNestedSubfolders = async (currentFolder) => {
+      const folders = [];
       
       try {
         const folderResponse = await axios.get(
@@ -405,25 +405,25 @@ router.get('/audios', authenticate, async (req, res) => {
         const directSubfolders = folderResponse.data.folders || [];
         
         for (const subfolder of directSubfolders) {
-          allFolders.push({
+          // Recursively get subfolders of this subfolder
+          const nestedFolders = await getNestedSubfolders(subfolder.path);
+          
+          folders.push({
             name: subfolder.name,
             path: subfolder.path,
+            subfolders: nestedFolders,
           });
-          
-          // Recursively get subfolders of this subfolder
-          const nestedFolders = await getAllSubfolders(subfolder.path);
-          allFolders.push(...nestedFolders);
         }
       } catch (error) {
         // If folder doesn't exist or has no subfolders, continue
         console.log(`No subfolders found for ${currentFolder}`);
       }
       
-      return allFolders;
+      return folders;
     };
 
-    // Fetch all subfolders recursively
-    const subfolders = await getAllSubfolders(folder);
+    // Fetch nested subfolders
+    const subfolders = await getNestedSubfolders(folder);
 
     const audios = audioResponse.data.resources.map(resource => ({
       public_id: resource.public_id,
