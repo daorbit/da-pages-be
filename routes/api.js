@@ -289,13 +289,10 @@ router.get('/audios', authenticate, async (req, res) => {
 
     const limit = parseInt(req.query.limit) || 10;
     const nextCursor = req.query.next_cursor;
-    const folder = req.query.folder; // Optional folder filter
+    const folder = req.query.folder || 'da-orbit-audio'; // Default to da-orbit-audio
 
     // ✅ Cloudinary Search API uses "expression"
-    let expression = 'folder:da-orbit-audio/*';
-    if (folder) {
-      expression = `folder:da-orbit-audio/${folder}/*`; // Filter by specific folder
-    }
+    let expression = `folder:${folder}/*`;
 
     const body = {
       expression,
@@ -310,7 +307,8 @@ router.get('/audios', authenticate, async (req, res) => {
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    const response = await axios.post(
+    // Fetch audios using Search API
+    const audioResponse = await axios.post(
       `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
       body,
       {
@@ -321,17 +319,34 @@ router.get('/audios', authenticate, async (req, res) => {
       }
     );
 
-    const audios = response.data.resources.map(resource => ({
+    // Fetch subfolders using Admin API
+    const folderResponse = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/folders/${folder}`,
+      {
+        auth: {
+          username: apiKey,
+          password: apiSecret,
+        },
+      }
+    );
+
+    const audios = audioResponse.data.resources.map(resource => ({
       public_id: resource.public_id,
       secure_url: resource.secure_url,
       created_at: resource.created_at,
       name: resource.display_name || null,
     }));
 
+    const subfolders = folderResponse.data.folders.map(f => ({
+      name: f.name,
+      path: f.path,
+    }));
+
     res.json({
+      subfolders,
       audios,
-      nextCursor: response.data.next_cursor,
-      hasMore: !!response.data.next_cursor,
+      nextCursor: audioResponse.data.next_cursor,
+      hasMore: !!audioResponse.data.next_cursor,
     });
   } catch (error) {
     console.error('❌ Failed to fetch audios from Cloudinary:', error.response?.data || error.message);
