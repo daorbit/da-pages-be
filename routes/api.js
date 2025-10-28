@@ -215,6 +215,63 @@ router.put('/images/:publicId', async (req, res) => {
   }
 });
 
+// Get audio folders from Cloudinary
+router.get('/audios/folders', authenticate, async (req, res) => {
+  try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({
+        error: 'Cloudinary configuration missing',
+        message: 'Server configuration error',
+      });
+    }
+
+    // Get all resources in da-orbit-audio folder to extract unique folders
+    const params = new URLSearchParams({
+      expression: 'folder:da-orbit-audio/*',
+      resource_type: 'video',
+      max_results: '500', // Get more results to find all folders
+      with_field: 'context',
+    });
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+    const response = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+      {
+        params,
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    // Extract unique folders from public_ids
+    const folders = new Set();
+    response.data.resources.forEach(resource => {
+      const publicId = resource.public_id;
+      // public_id format: da-orbit-audio/folder-name/filename
+      const parts = publicId.split('/');
+      if (parts.length >= 3) {
+        folders.add(parts[1]); // folder name is the second part
+      }
+    });
+
+    res.json({
+      folders: Array.from(folders).sort(),
+    });
+  } catch (error) {
+    console.error('❌ Failed to fetch audio folders from Cloudinary:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch audio folders',
+      message: error.response?.data?.message || 'Internal server error',
+    });
+  }
+});
+
 // Get uploaded audios from Cloudinary
 router.get('/audios', authenticate, async (req, res) => {
   try {
@@ -231,10 +288,16 @@ router.get('/audios', authenticate, async (req, res) => {
 
     const limit = parseInt(req.query.limit) || 10;
     const nextCursor = req.query.next_cursor;
+    const folder = req.query.folder; // Optional folder filter
 
     // ✅ Cloudinary Search API uses "expression"
+    let expression = 'folder:da-orbit-audio/*';
+    if (folder) {
+      expression = `folder:da-orbit-audio/${folder}/*`; // Filter by specific folder
+    }
+
     const params = new URLSearchParams({
-      expression: 'folder:da-orbit-audio/*', // 👈 filter only files inside this folder
+      expression,
       resource_type: 'video',                // 👈 audio files are stored as "video"
       max_results: limit.toString(),
       with_field: 'context',                 // 👈 include context field in response
