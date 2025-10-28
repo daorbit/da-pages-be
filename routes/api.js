@@ -319,27 +319,49 @@ router.get('/audios', authenticate, async (req, res) => {
       }
     );
 
-    // Fetch subfolders using Admin API
-    const folderResponse = await axios.get(
-      `https://api.cloudinary.com/v1_1/${cloudName}/folders/${folder}`,
-      {
-        auth: {
-          username: apiKey,
-          password: apiSecret,
-        },
+    // Recursive function to get all subfolders
+    const getAllSubfolders = async (currentFolder) => {
+      const allFolders = [];
+      
+      try {
+        const folderResponse = await axios.get(
+          `https://api.cloudinary.com/v1_1/${cloudName}/folders/${currentFolder}`,
+          {
+            auth: {
+              username: apiKey,
+              password: apiSecret,
+            },
+          }
+        );
+
+        const directSubfolders = folderResponse.data.folders || [];
+        
+        for (const subfolder of directSubfolders) {
+          allFolders.push({
+            name: subfolder.name,
+            path: subfolder.path,
+          });
+          
+          // Recursively get subfolders of this subfolder
+          const nestedFolders = await getAllSubfolders(subfolder.path);
+          allFolders.push(...nestedFolders);
+        }
+      } catch (error) {
+        // If folder doesn't exist or has no subfolders, continue
+        console.log(`No subfolders found for ${currentFolder}`);
       }
-    );
+      
+      return allFolders;
+    };
+
+    // Fetch all subfolders recursively
+    const subfolders = await getAllSubfolders(folder);
 
     const audios = audioResponse.data.resources.map(resource => ({
       public_id: resource.public_id,
       secure_url: resource.secure_url,
       created_at: resource.created_at,
       name: resource.display_name || null,
-    }));
-
-    const subfolders = folderResponse.data.folders.map(f => ({
-      name: f.name,
-      path: f.path,
     }));
 
     res.json({
