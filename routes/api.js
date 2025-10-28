@@ -289,11 +289,12 @@ router.get('/audios/folders/all', authenticate, async (req, res) => {
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    // Recursive function to get all folders
+    // Recursive function to get all folders as nested structure
     const getAllFolders = async (currentPath = 'da-orbit-audio') => {
-      const allFolders = [];
+      const folders = [];
 
       try {
+        console.log(`Fetching folders for path: ${currentPath}`);
         const response = await axios.get(
           `https://api.cloudinary.com/v1_1/${cloudName}/folders/${currentPath}`,
           {
@@ -304,23 +305,26 @@ router.get('/audios/folders/all', authenticate, async (req, res) => {
           }
         );
 
+        console.log(`Found ${response.data.folders?.length || 0} folders for ${currentPath}:`, response.data.folders);
+
         for (const folder of response.data.folders || []) {
           const folderPath = `${currentPath}/${folder.name}`;
-          allFolders.push({
+          
+          // Recursively get subfolders
+          const subfolders = await getAllFolders(folderPath);
+          
+          folders.push({
             name: folder.name,
             path: folderPath,
+            subfolders: subfolders,
           });
-
-          // Recursively get subfolders
-          const subFolders = await getAllFolders(folderPath);
-          allFolders.push(...subFolders);
         }
       } catch (error) {
         // If folder doesn't exist or has no subfolders, continue
-        console.log(`No subfolders found for ${currentPath}`);
+        console.log(`No subfolders found for ${currentPath}:`, error.response?.data || error.message);
       }
 
-      return allFolders;
+      return folders;
     };
 
     const allFolders = await getAllFolders();
