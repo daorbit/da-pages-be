@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
+import cors from 'cors';
 import { authenticate } from '../middleware/index.js';
 import Track from '../models/Track.js';
 
@@ -80,7 +81,7 @@ const trackValidationRules = [
 ];
 
 // GET /api/tracks - Get all tracks
-router.get('/', async (req, res) => {
+router.get('/', cors({ origin: '*' }), async (req, res) => {
   try {
     const { page = 1, limit = 10, category, author, search } = req.query;
     const skip = (page - 1) * limit;
@@ -141,6 +142,7 @@ router.get('/', async (req, res) => {
 router.get('/:id',
   param('id').isMongoId().withMessage('Invalid track ID'),
   handleValidationErrors,
+  cors({ origin: '*' }),
   async (req, res) => {
     try {
       const { id } = req.params;

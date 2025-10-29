@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
+import cors from 'cors';
 import { authenticate } from '../middleware/index.js';
 import Playlist from '../models/Playlist.js';
 
@@ -82,7 +83,7 @@ const playlistValidationRules = [
 ];
 
 // GET /api/playlists - Get all playlists
-router.get('/', async (req, res) => {
+router.get('/', cors({ origin: '*' }), async (req, res) => {
   try {
     const { page = 1, limit = 10, createdBy, isPublic, search, tag } = req.query;
     const skip = (page - 1) * limit;
@@ -146,6 +147,7 @@ router.get('/', async (req, res) => {
 router.get('/:id',
   param('id').isMongoId().withMessage('Invalid playlist ID'),
   handleValidationErrors,
+  cors({ origin: '*' }),
   async (req, res) => {
     try {
       const { id } = req.params;
