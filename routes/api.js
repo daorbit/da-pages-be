@@ -232,23 +232,26 @@ router.get('/audios', authenticate, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const nextCursor = req.query.next_cursor;
 
-    const params = {
-      type: 'upload',
-      prefix: 'da-orbit-audio',
-      max_results: limit,
-    };
+    // ✅ Cloudinary Search API uses "expression"
+    const params = new URLSearchParams({
+      expression: 'folder:da-orbit-audio*', // 👈 filter files in da-orbit-audio and all subfolders
+      resource_type: 'video',                // 👈 audio files are stored as "video"
+      max_results: limit.toString(),
+      with_field: 'context',                 // 👈 include context field in response
+    });
 
     if (nextCursor) {
-      params.next_cursor = nextCursor;
+      params.append('next_cursor', nextCursor);
     }
 
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
     const response = await axios.get(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/video`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
       {
         params,
-        auth: {
-          username: apiKey,
-          password: apiSecret
+        headers: {
+          Authorization: `Basic ${auth}`,
         },
       }
     );
@@ -257,7 +260,7 @@ router.get('/audios', authenticate, async (req, res) => {
       public_id: resource.public_id,
       secure_url: resource.secure_url,
       created_at: resource.created_at,
-      name: resource.display_name || resource.public_id.split('/').pop(),
+      name: resource.display_name || null,
     }));
 
     res.json({
@@ -387,32 +390,29 @@ router.get('/audio-folders', authenticate, async (req, res) => {
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
-    // Helper function to fetch all video resources with pagination
-    const fetchAllVideoResources = async (prefix = null) => {
+    // Helper function to fetch all resources with pagination
+    const fetchAllResources = async (expression) => {
       let allResources = [];
       let nextCursor = null;
 
       do {
-        const params = {
-          type: 'upload',
-          max_results: 500,
-        };
-
-        if (prefix) {
-          params.prefix = prefix;
-        }
+        const params = new URLSearchParams({
+          expression,
+          resource_type: 'video',
+          max_results: '500',
+          with_field: 'context',
+        });
 
         if (nextCursor) {
-          params.next_cursor = nextCursor;
+          params.append('next_cursor', nextCursor);
         }
 
         const response = await axios.get(
-          `https://api.cloudinary.com/v1_1/${cloudName}/resources/video`,
+          `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
           {
             params,
-            auth: {
-              username: apiKey,
-              password: apiSecret
+            headers: {
+              Authorization: `Basic ${auth}`,
             },
           }
         );
@@ -424,45 +424,68 @@ router.get('/audio-folders', authenticate, async (req, res) => {
       return allResources;
     };
 
-    // Get all video resources with da-orbit-audio prefix
-    const allAudios = await fetchAllVideoResources('da-orbit-audio');
+    // First, get all folders under da-orbit-audio
+    const foldersResponse = await axios.get(
+      `https://api.cloudinary.com/v1_1/${cloudName}/folders/da-orbit-audio`,
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
 
-    // Organize by folders
-    const folderMap = new Map();
+    const folders = foldersResponse.data.folders || [];
 
-    allAudios.forEach(resource => {
-      // Extract folder path from public_id
-      const publicIdParts = resource.public_id.split('/');
-      const folderPath = publicIdParts.length > 1 ? publicIdParts.slice(0, -1).join('/') : 'da-orbit-audio';
-      const fileName = publicIdParts[publicIdParts.length - 1];
+    // For each folder, get the audios
+    const folderStructure = await Promise.all(
+      folders.map(async (folder) => {
+        const folderPath = folder.path;
+        const folderName = folder.name;
 
-      if (!folderMap.has(folderPath)) {
-        const folderName = folderPath === 'da-orbit-audio' ? 'Root' : folderPath.split('/').pop();
-        folderMap.set(folderPath, {
+        // Get audios in this specific folder
+        const allAudios = await fetchAllResources(`folder:${folderPath}`);
+
+        const audios = allAudios.map(resource => ({
+          public_id: resource.public_id,
+          secure_url: resource.secure_url,
+          created_at: resource.created_at,
+          name: resource.display_name || resource.public_id.split('/').pop(),
+          folder: folderPath,
+        }));
+
+        return {
           name: folderName,
           path: folderPath,
-          audios: [],
-          audioCount: 0,
-        });
-      }
+          audios: audios,
+          audioCount: audios.length,
+        };
+      })
+    );
 
-      const folder = folderMap.get(folderPath);
-      folder.audios.push({
-        public_id: resource.public_id,
-        secure_url: resource.secure_url,
-        created_at: resource.created_at,
-        name: resource.display_name || fileName,
-        folder: folderPath,
+    // Also get audios directly in the root da-orbit-audio folder
+    const rootAudios = await fetchAllResources(`folder:da-orbit-audio`);
+
+    const rootAudiosMapped = rootAudios.map(resource => ({
+      public_id: resource.public_id,
+      secure_url: resource.secure_url,
+      created_at: resource.created_at,
+      name: resource.display_name || resource.public_id.split('/').pop(),
+      folder: 'da-orbit-audio',
+    }));
+
+    if (rootAudiosMapped.length > 0) {
+      folderStructure.unshift({
+        name: 'Root',
+        path: 'da-orbit-audio',
+        audios: rootAudiosMapped,
+        audioCount: rootAudiosMapped.length,
       });
-      folder.audioCount++;
-    });
-
-    const folderStructure = Array.from(folderMap.values());
+    }
 
     res.json({
       folders: folderStructure,
       totalFolders: folderStructure.length,
-      totalAudios: allAudios.length,
+      totalAudios: folderStructure.reduce((sum, folder) => sum + folder.audioCount, 0),
     });
   } catch (error) {
     console.error('❌ Failed to fetch audio folders from Cloudinary:', error.response?.data || error.message);
