@@ -241,7 +241,7 @@ router.get('/audios', authenticate, async (req, res) => {
     });
 
     if (nextCursor) {
-      params.append('next_cursor', nextCursor);
+      params.append('next_cursor', nextCursor); 
     }
 
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
